@@ -225,9 +225,8 @@
       position: sticky;
       top: 98px;
       z-index: 10;
-      padding: 10px 0;
-      background: linear-gradient(180deg, rgba(7,17,31,.96), rgba(7,17,31,.76));
-      backdrop-filter: blur(16px);
+      padding: 6px 0 8px;
+      background: transparent;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
@@ -264,12 +263,13 @@
     .flow-pill {
       border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 10px 8px;
+      padding: 9px 8px;
       text-align: center;
       color: var(--muted);
-      background: rgba(15,23,42,.72);
+      background: rgba(15,23,42,.58);
       font-size: .84rem;
       font-weight: 900;
+      box-shadow: 0 8px 22px rgba(0,0,0,.12);
     }
 
     .flow-pill.active {
@@ -575,7 +575,7 @@
       <div class="button-row">
         <button onclick="startTimer()">Start</button>
         <button class="secondary" onclick="pauseTimer()">Pausar</button>
-        <button class="ghost" onclick="resetTimer()">Reset timer</button>
+        <button class="ghost" onclick="resetTimer()">Reset</button>
       </div>
     </section>
 
@@ -1013,7 +1013,8 @@
       history.unshift(entry);
       history = history.slice(0, 20);
       localStorage.setItem(STORAGE_HISTORY, JSON.stringify(history));
-      alert("Treino gravado!");
+      resetCurrentWorkout();
+      alert("Treino gravado! O treino foi reposto para começares do zero da próxima vez.");
       renderHistory();
       showAppTab("history");
     }
@@ -1129,10 +1130,18 @@
       timerInterval = null;
     }
 
-    function resetTimer() {
+    function resetCurrentWorkout() {
       pauseTimer();
       timerSeconds = 30 * 60;
+      today = {};
+      saveToday();
+      render();
       updateTimer();
+    }
+
+    function resetTimer() {
+      resetCurrentWorkout();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     render();
