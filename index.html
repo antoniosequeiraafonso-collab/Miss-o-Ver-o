@@ -95,7 +95,7 @@
       </section>
       <section class="card">
         <h2>Adicionar novos treinos no GitHub</h2>
-        <p>Para adicionares novos treinos de forma simples, edita a zona <b>WORKOUTS</b> no código. Duplica o bloco do “Treino Tó Gordo”, muda o <b>id</b>, <b>name</b> e a lista <b>steps</b>. Cada step aceita: phase, title, gif, description, cues, medium e hard.</p>
+        <p>Para adicionares novos treinos sem mexer no index, cria/edita um ficheiro separado chamado <b>workouts.js</b> no GitHub. Esse ficheiro deve definir <b>window.WORKOUTS = [...]</b>. O index carrega esse ficheiro automaticamente. Se ele não existir, usa o treino default embutido.</p>
       </section>
     </div>
   </div>
@@ -106,8 +106,9 @@
   <div class="modal-backdrop" id="manualModal"><div class="modal"><h2>Adicionar treino</h2><p>Escolhe a data e a percentagem concluída.</p><label for="manualDate">Data</label><input type="date" id="manualDate"/><label for="manualPct">Percentagem concluída</label><input type="number" id="manualPct" min="0" max="100" value="100"/><div class="modal-actions"><button class="secondary" onclick="closeManualModal()">Cancelar</button><button onclick="confirmManualWorkout()">Guardar</button></div></div></div>
   <div class="modal-backdrop" id="deleteModal"><div class="modal"><h2>Apagar treino?</h2><p>Esta acção remove o treino do histórico. Tens a certeza?</p><div class="modal-actions"><button class="secondary" onclick="closeDeleteModal()">Cancelar</button><button class="danger" onclick="confirmDeleteWorkout()">Apagar</button></div></div></div>
 
+  <script src="workouts.js"></script>
   <script>
-    const WORKOUTS = [
+    const DEFAULT_WORKOUTS = [
       {
         id: "treino-to-gordo",
         name: "Treino Tó Gordo",
@@ -132,6 +133,8 @@
         ]
       }
     ];
+
+    const WORKOUTS = Array.isArray(window.WORKOUTS) && window.WORKOUTS.length ? window.WORKOUTS : DEFAULT_WORKOUTS;
 
     const STORAGE_TODAY="fullBodyFlowTodayV2";
     const STORAGE_HISTORY="fullBodyFlowHistoryV2";
@@ -180,14 +183,14 @@
     function goCurrent(){const current=getCurrentStep();const target=current?$(`step-${current.id}`):$("historyView");target.scrollIntoView({behavior:"smooth",block:"start"})}
     function markCurrentDone(){const current=getCurrentStep();if(!current){saveWorkout();return;}setDone(current.id,true);startCurrentExerciseTimer();setTimeout(goCurrent,80)}
 
-    function saveWorkout(){if(!activeWorkout){alert("Ainda não tens nenhum treino activo.");return;}const done=activeSteps.filter(s=>isDone(s.id)).length;const pct=Math.round(done/activeSteps.length*100);history.unshift({date:new Date().toLocaleString("pt-PT"),workoutName:activeWorkout.name,difficulty:selectedDifficulty,done,total:activeSteps.length,pct});history=history.slice(0,50);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));resetCurrentWorkout(true);alert("Treino gravado! O treino foi reposto.");renderHistory();showAppTab("history")}
+    function saveWorkout(){if(!activeWorkout){alert("Ainda não tens nenhum treino activo.");return;}const done=activeSteps.filter(s=>isDone(s.id)).length;const pct=Math.round(done/activeSteps.length*100);history.unshift({date:new Date().toLocaleString("pt-PT"),workoutName:activeWorkout.name,difficulty:selectedDifficulty,done,total:activeSteps.length,pct});history=history.slice(0,50);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));resetCurrentWorkout(true);alert("Treino gravado! O treino foi reposto.");renderHistory();renderDashboard();showAppTab("dashboard")}
     function renderHistory(){const list=$("historyList");if(!history.length){list.innerHTML=`<div class="history-item">Ainda sem treinos gravados.</div>`;return;}list.innerHTML=history.map((h,i)=>`<div class="history-item"><div><strong>${h.date}</strong>${h.manual?` <span class="tag">manual</span>`:""}<br>${h.workoutName||"Treino"} · ${h.difficulty==="hard"?"Difícil":"Médio"} · ${h.done}/${h.total} etapas · ${h.pct}%</div><button class="danger" onclick="deleteWorkout(${i})">Apagar</button></div>`).join("")}
     function addManualWorkout(){$("manualDate").value=new Date().toISOString().slice(0,10);$("manualPct").value=100;$("manualModal").classList.add("show")}
     function closeManualModal(){$("manualModal").classList.remove("show")}
-    function confirmManualWorkout(){const date=$("manualDate").value||new Date().toISOString().slice(0,10);const pct=Math.max(0,Math.min(100,Number($("manualPct").value)||100));const total=activeSteps.length||16;const done=Math.round(pct/100*total);history.unshift({date:`${date} 00:00`,workoutName:activeWorkout?.name||"Treino manual",difficulty:selectedDifficulty,done,total,pct,manual:true});history=history.slice(0,50);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));closeManualModal();renderHistory()}
+    function confirmManualWorkout(){const date=$("manualDate").value||new Date().toISOString().slice(0,10);const pct=Math.max(0,Math.min(100,Number($("manualPct").value)||100));const total=activeSteps.length||16;const done=Math.round(pct/100*total);history.unshift({date:`${date} 00:00`,workoutName:activeWorkout?.name||"Treino manual",difficulty:selectedDifficulty,done,total,pct,manual:true});history=history.slice(0,50);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));closeManualModal();renderHistory();renderDashboard()}
     function deleteWorkout(index){pendingDeleteIndex=index;$("deleteModal").classList.add("show")}
     function closeDeleteModal(){pendingDeleteIndex=null;$("deleteModal").classList.remove("show")}
-    function confirmDeleteWorkout(){if(pendingDeleteIndex===null)return;history.splice(pendingDeleteIndex,1);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));closeDeleteModal();renderHistory()}
+    function confirmDeleteWorkout(){if(pendingDeleteIndex===null)return;history.splice(pendingDeleteIndex,1);localStorage.setItem(STORAGE_HISTORY,JSON.stringify(history));closeDeleteModal();renderHistory();renderDashboard()}
 
     function updateTimer(){ $("timer").textContent=formatTime(timerSeconds); updateExerciseTimer(); if(timerSeconds<=0&&timerInterval){pauseTimer();playBeep("final");alert("Tempo total feito. Marca o que completaste e grava o treino.");} }
     function updateExerciseTimer(){const current=getCurrentStep();$("exerciseTimer").textContent=current?formatTime(exerciseSeconds):"00:00"}
@@ -202,7 +205,7 @@
 
     window.showAppTab=showAppTab;window.openStartModal=openStartModal;window.closeStartModal=closeStartModal;window.selectWorkout=selectWorkout;window.selectDifficulty=selectDifficulty;window.startSelectedWorkout=startSelectedWorkout;window.setDone=setDone;window.pauseTimer=pauseTimer;window.resetTimer=resetTimer;window.markCurrentDone=markCurrentDone;window.goCurrent=goCurrent;window.saveWorkout=saveWorkout;window.addManualWorkout=addManualWorkout;window.closeManualModal=closeManualModal;window.confirmManualWorkout=confirmManualWorkout;window.deleteWorkout=deleteWorkout;window.closeDeleteModal=closeDeleteModal;window.confirmDeleteWorkout=confirmDeleteWorkout;window.handleImageError=handleImageError;
 
-    render();updateTimer();renderHistory();
+    render();updateTimer();renderHistory();renderDashboard();
   </script>
 </body>
 </html>
